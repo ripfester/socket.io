@@ -677,7 +677,7 @@ describe('socket.io', function(){
         });
       });
     });
-    
+
     it('should not reuse same-namespace connections', function(done){
       var srv = http();
       var sio = io(srv);
@@ -833,6 +833,35 @@ describe('socket.io', function(){
 
       setTimeout(function() {
         expect(counter).to.be(1);
+        done();
+      }, 500);
+    });
+
+    it('should emit loopback messages locally', function(done) {
+      var srv = http();
+      var sio = io(srv);
+
+      var local_counter = 0;
+      var remote_counter = 0;
+      srv.listen(function(){
+        sio.of('/chat').on('connection', function(s){
+          setTimeout(function() {
+            sio.of('/chat').loopback.emit('ev', 'data');
+          }, 50);
+          s.on('ev', function() {
+            local_counter++;
+          });
+        });
+
+        var socket = client(srv, '/chat');
+        socket.on('ev', function() {
+          remote_counter++;
+        });
+      });
+
+      setTimeout(function() {
+        expect(local_counter).to.be(1);
+        expect(remote_counter).to.be(0);
         done();
       }, 500);
     });
@@ -1608,7 +1637,7 @@ describe('socket.io', function(){
         });
       });
     });
-    
+
     it('should see query parameters sent from secondary namespace connections in handshake object', function(done){
       var srv = http();
       var sio = io(srv);
